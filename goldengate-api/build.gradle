@@ -22,4 +22,4 @@ dependencies {
 
 // 以下用于 JitPack 识别 groupId 和 version
 group = 'com.github.justdoixJX.GoldenGate' // 建议和仓库路径一致
-version = '1.0.0'
+version = '1.2.0'
