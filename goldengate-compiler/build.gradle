@@ -1,0 +1,18 @@
+apply plugin: 'java'
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.squareup:javapoet:1.4.0'
+    implementation 'com.google.code.gson:gson:2.4'
+    implementation project(':api')
+}
+
+// 如果真的需要访问 goldengate-api 的类，推荐发布后用依赖方式引入
+// implementation 'com.github.yourname.GoldenGate:goldengate-api:1.0.0'
+
+// 添加版本信息供 JitPack 构建识别
+group = 'com.github.justdoixJX.GoldenGate'
+version = '1.0.0'
