@@ -14,5 +14,5 @@ dependencies {
 // implementation 'com.github.yourname.GoldenGate:goldengate-api:1.0.0'
 
 // 添加版本信息供 JitPack 构建识别
-group = 'com.github.justdoixJX.GoldenGate'
-version = '1.2.0'
+group = 'com.github.justdoixJX.golden-gate'
+version = '1.3.0'
