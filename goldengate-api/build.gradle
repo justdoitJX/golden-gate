@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
 
 android {
     compileSdkVersion 23
@@ -7,6 +8,16 @@ android {
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 23
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    // JitPack 识别 release component
+    publishing {
+        singleVariant("release")
     }
 
     compileOptions {
@@ -20,6 +31,13 @@ dependencies {
     compileOnly 'com.google.code.gson:gson:2.4'
 }
 
-// 以下用于 JitPack 识别 groupId 和 version
-group = 'com.github.justdoixJX.golden-gate' // 建议和仓库路径一致
-version = '1.3.0'
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.release // 如果是 Android library
+            groupId = 'com.github.justdoitJX'
+            artifactId = 'goldengate-api'
+            version = '1.4.0'
+        }
+    }
+}
