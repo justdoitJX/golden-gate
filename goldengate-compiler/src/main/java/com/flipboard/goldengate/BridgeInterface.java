@@ -53,7 +53,7 @@ public class BridgeInterface {
 
     private static boolean hasCallback(List<BridgeMethod> methods) {
         for (BridgeMethod method : methods) {
-            if (method.hasCallbackParameters) {
+            if (method.hasCallbackParameters || method.callback != null) {
                 return true;
             }
         }
@@ -72,8 +72,8 @@ public class BridgeInterface {
         // Generate the result bridge if necessary
         boolean needsCallbacks = hasCallback(bridgeMethods);
         if (needsCallbacks) {
-            bridge.addField(ClassName.get(packageName, name + "Bridge", "ResultBridge"), "resultBridge", Modifier.PRIVATE);
-            bridge.addField(AtomicLong.class, "receiverIds", Modifier.PRIVATE);
+            bridge.addField(ClassName.get(packageName, name + "Bridge", "ResultBridge"), "resultBridge", Modifier.PRIVATE, Modifier.FINAL);
+            bridge.addField(AtomicLong.class, "receiverIds", Modifier.PRIVATE, Modifier.FINAL);
             Type callbacksMapType = new TypeToken<Map<Long, WeakReference<Callback<String>>>>(){}.getType();
             Type callbackType = new TypeToken<Callback<String>>(){}.getType();
             bridge.addType(TypeSpec.classBuilder("ResultBridge")
@@ -114,7 +114,16 @@ public class BridgeInterface {
                 .addParameter(WebView.class, "webView")
                 .addStatement("super($N)", "webView");
         if (needsCallbacks) {
-            constructorBuilder.addStatement("initBridge()");
+            constructorBuilder
+                .addStatement("this.$N = new ResultBridge()", "resultBridge")
+                .addStatement("this.$N = new $T()", "receiverIds", AtomicLong.class)
+                .addStatement("this.$N.addJavascriptInterface($N, $L)", "webView", "resultBridge", "\"" + name + "\"")
+                .addCode("evaluateJavascript(webView, \n" +
+                        "                \"function GoldenGate$$$$CreateCallback(receiver) {\" +\n" +
+                        "                \"    return function(result) {\" +\n" +
+                        "                \"        $N.onResult(JSON.stringify({receiver: receiver, result: JSON.stringify(result)}))\" +\n" +
+                        "                \"    }\" +\n" +
+                        "                \"}\");", name);
         }
         bridge.addMethod(
                 constructorBuilder.build()
@@ -127,31 +136,20 @@ public class BridgeInterface {
                 .addParameter(JsonSerializer.class, "jsonSerializer")
                 .addStatement("super($N, $N)", "webView", "jsonSerializer");
         if (needsCallbacks) {
-            constructorBuilder.addStatement("initBridge()");
+            constructorBuilder
+                .addStatement("this.$N = new ResultBridge()", "resultBridge")
+                .addStatement("this.$N = new $T()", "receiverIds", AtomicLong.class)
+                .addStatement("this.$N.addJavascriptInterface($N, $L)", "webView", "resultBridge", "\"" + name + "\"")
+                .addCode("evaluateJavascript(webView, \n" +
+                        "                \"function GoldenGate$$$$CreateCallback(receiver) {\" +\n" +
+                        "                \"    return function(result) {\" +\n" +
+                        "                \"        $N.onResult(JSON.stringify({receiver: receiver, result: JSON.stringify(result)}))\" +\n" +
+                        "                \"    }\" +\n" +
+                        "                \"}\");", name);
         }
         bridge.addMethod(
             constructorBuilder.build()
         );
-
-        // Add common init method for both constructors
-        if (needsCallbacks) {
-            bridge.addMethod(
-                    MethodSpec.methodBuilder("initBridge")
-                        .addModifiers(Modifier.PRIVATE)
-                        .addStatement("this.$N = new ResultBridge()", "resultBridge")
-                        .addStatement("this.$N = new $T()", "receiverIds", AtomicLong.class)
-                        .addStatement("this.$N.addJavascriptInterface($N, $L)", "webView", "resultBridge",
-                                "\"" + name + "\"")
-                        .addCode("evaluateJavascript(webView, \n" +
-                                "                \"function GoldenGate$$$$CreateCallback(receiver) {\" +\n" +
-                                "                \"    return function(result) {\" +\n" +
-                                "                \"        $N.onResult(JSON.stringify({receiver: receiver, result: JSON.stringify(result)}))\" +\n"
-                                +
-                                "                \"    }\" +\n" +
-                                "                \"}\");", name)
-                        .build()
-            );
-        }
 
         // Add Bridge methods
         for (BridgeMethod method : bridgeMethods) {
