@@ -34,7 +34,7 @@ public class BridgeProperty {
     public MethodSpec toMethodSpec(BridgeInterface bridge) {
         MethodSpec.Builder methodSpec = MethodSpec.methodBuilder(javaName).addModifiers(Modifier.PUBLIC);
 
-        if (callback != null) {
+        if (callback != null && bridge.needsCallbacks()) {
             methodSpec.addParameter(TypeName.get(callback.type), callback.name, Modifier.FINAL);
             methodSpec.addCode(CodeBlock.builder()
                     .addStatement("$T id = receiverIds.incrementAndGet()", long.class)

@@ -4,7 +4,7 @@ apply plugin: 'maven-publish'
 def objects = project.objects
 
 group = 'com.github.justdoitJX.golden-gate'
-version = '1.4.5'
+version = '1.4.6'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -25,7 +25,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.4'
     implementation 'com.google.auto.service:auto-service:1.1.1'
     annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-    implementation 'com.github.justdoitJX.golden-gate:goldengate-api:1.4.5'
+    implementation 'com.github.justdoitJX.golden-gate:goldengate-api:1.4.6'
 }
 
 tasks.withType(JavaCompile) {
@@ -40,7 +40,7 @@ afterEvaluate {
                 from components.java
                 groupId = 'com.github.justdoitJX.golden-gate'
                 artifactId = 'goldengate-compiler'
-                version = '1.4.5'
+                version = '1.4.6'
 
                 pom {
                     name = 'GoldenGate Compiler'

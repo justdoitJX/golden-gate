@@ -60,7 +60,7 @@ public class BridgeMethod {
             methodSpec.addParameter(TypeName.get(parameters.get(i).type), parameters.get(i).name, Modifier.FINAL);
         }
 
-        if (callback != null) {
+        if (callback != null && bridge.needsCallbacks()) {
             methodSpec.addParameter(TypeName.get(callback.type), callback.name, Modifier.FINAL);
             methodSpec.addCode(CodeBlock.builder()
                     .addStatement("$T id = receiverIds.incrementAndGet()", long.class)
@@ -77,11 +77,11 @@ public class BridgeMethod {
                     .build());
         }
 
-        if (hasCallbackParameters) {
+        if (hasCallbackParameters && bridge.needsCallbacks()) {
             methodSpec.addStatement("$T<$T, $T> idMap = new $T<>()", Map.class, String.class, Long.class, HashMap.class);
         }
         for (BridgeParameter parameter : parameters) {
-            if (parameter instanceof BridgeCallback) {
+            if (parameter instanceof BridgeCallback && bridge.needsCallbacks()) {
                 BridgeCallback callbackParameter = (BridgeCallback) parameter;
                 methodSpec.addCode(CodeBlock.builder()
                         .addStatement("idMap.put($S, receiverIds.incrementAndGet())", callbackParameter.name)
@@ -99,57 +99,33 @@ public class BridgeMethod {
             }
         }
 
-        if (parameters.size() > 0) {
-            String parameterList = "";
-            for (int i = 0; i < parameters.size(); i++) {
-                BridgeParameter parameter = parameters.get(i);
-                if (parameter instanceof BridgeCallback) {
-                    BridgeCallback callbackParameter = (BridgeCallback) parameter;
-                    parameterList += "\"GoldenGate$$CreateCallback(\"+idMap.get(\"" + callbackParameter.name + "\")+\")\"";
-                } else if (i < parameters.size()) {
-                    parameterList += "toJson(" + parameter.name + ")";
-                }
-                if (i < parameters.size()-1) {
-                    parameterList += " + \", \" + ";
-                }
+        // 生成 JavaScript 调用代码
+        CodeBlock.Builder codeBlock = CodeBlock.builder();
+        codeBlock.addStatement("$T javascript = \"$L(\"", String.class, name);
+        boolean first = true;
+        for (BridgeParameter parameter : parameters) {
+            if (!first) {
+                codeBlock.add(", ");
             }
-
-            if (callback == null) {
-                CodeBlock.Builder codeBlock = CodeBlock.builder();
-                codeBlock.addStatement("$T javascript = \"$L(\"+$L+\");\"", String.class, name, parameterList);
-                if (bridge.isDebug) {
-                    codeBlock.addStatement("android.util.Log.d($S, javascript)", bridge.name);
-                }
-                codeBlock.addStatement("evaluateJavascript(webView, javascript)");
-                methodSpec.addCode(codeBlock.build());
+            if (parameter instanceof BridgeCallback && bridge.needsCallbacks()) {
+                codeBlock.add("GoldenGate$$$$CreateCallback(idMap.get($S))", parameter.name);
             } else {
-                CodeBlock.Builder codeBlock = CodeBlock.builder();
-                codeBlock.addStatement("$T javascript = \"$L.onResult(JSON.stringify({receiver:\"+id+\", result:JSON.stringify($L(\"+$L+\"))}));\"", String.class, bridge.name, name, parameterList);
-                if (bridge.isDebug) {
-                    codeBlock.addStatement("android.util.Log.d($S, javascript)", bridge.name);
-                }
-                codeBlock.addStatement("evaluateJavascript(webView, javascript)");
-                methodSpec.addCode(codeBlock.build());
+                codeBlock.add("toJson($N)", parameter.name);
             }
-        } else {
-            if (callback == null) {
-                CodeBlock.Builder codeBlock = CodeBlock.builder();
-                codeBlock.addStatement("$T javascript = \"$L();\"", String.class, name);
-                if (bridge.isDebug) {
-                    codeBlock.addStatement("android.util.Log.d($S, javascript)", bridge.name);
-                }
-                codeBlock.addStatement("evaluateJavascript(webView, javascript)");
-                methodSpec.addCode(codeBlock.build());
-            } else {
-                CodeBlock.Builder codeBlock = CodeBlock.builder();
-                codeBlock.addStatement("$T javascript = \"$L.onResult(JSON.stringify({receiver:\"+id+\", result:JSON.stringify($L())}));\"", String.class, bridge.name, name);
-                if (bridge.isDebug) {
-                    codeBlock.addStatement("android.util.Log.d($S, javascript)", bridge.name);
-                }
-                codeBlock.addStatement("evaluateJavascript(webView, javascript)");
-                methodSpec.addCode(codeBlock.build());
-            }
+            first = false;
         }
+        if (callback != null && bridge.needsCallbacks()) {
+            if (!first) {
+                codeBlock.add(", ");
+            }
+            codeBlock.add("GoldenGate$$$$CreateCallback(id)");
+        }
+        codeBlock.add(");\"");
+        if (bridge.isDebug) {
+            codeBlock.addStatement("android.util.Log.d($S, javascript)", bridge.name);
+        }
+        codeBlock.addStatement("evaluateJavascript(webView, javascript)");
+        methodSpec.addCode(codeBlock.build());
 
         return methodSpec.build();
     }

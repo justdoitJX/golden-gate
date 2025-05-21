@@ -22,9 +22,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -36,28 +38,41 @@ public class BridgeInterface {
     private TypeMirror type;
     private ArrayList<BridgeMethod> bridgeMethods = new ArrayList<>();
     private ArrayList<BridgeProperty> bridgeProperties = new ArrayList<>();
+    private boolean needsCallbacks = false;
 
     public BridgeInterface(Element element, Elements elementUtils, Types typeUtils) {
         this.name = element.getSimpleName().toString();
-        this.isDebug = element.getAnnotation(Debug.class) != null;
+        TypeElement typeElement = elementUtils.getTypeElement(element.asType().toString());
+        this.isDebug = typeElement != null && typeElement.getAnnotation(Debug.class) != null;
         this.type = element.asType();
 
         for (Element method : element.getEnclosedElements()) {
-            if (method.getAnnotation(Property.class) != null) {
-                bridgeProperties.add(new BridgeProperty((ExecutableElement) method));
-            } else {
-                bridgeMethods.add(new BridgeMethod(((ExecutableElement) method), elementUtils, typeUtils));
+            if (method.getKind() == ElementKind.METHOD) {
+                ExecutableElement executableElement = (ExecutableElement) method;
+                TypeElement methodTypeElement = elementUtils.getTypeElement(executableElement.asType().toString());
+                if (methodTypeElement != null && methodTypeElement.getAnnotation(Property.class) != null) {
+                    bridgeProperties.add(new BridgeProperty(executableElement));
+                } else {
+                    bridgeMethods.add(new BridgeMethod(executableElement, elementUtils, typeUtils));
+                }
             }
         }
-    }
 
-    private static boolean hasCallback(List<BridgeMethod> methods) {
-        for (BridgeMethod method : methods) {
+        // 检查是否需要回调
+        for (BridgeMethod method : bridgeMethods) {
             if (method.hasCallbackParameters || method.callback != null) {
-                return true;
+                needsCallbacks = true;
+                break;
             }
         }
-        return false;
+        if (!needsCallbacks) {
+            for (BridgeProperty property : bridgeProperties) {
+                if (property.callback != null) {
+                    needsCallbacks = true;
+                    break;
+                }
+            }
+        }
     }
 
     public void writeToFiler(Filer filer) throws IOException {
@@ -70,7 +85,6 @@ public class BridgeInterface {
                 .superclass(JavaScriptBridge.class);
 
         // Generate the result bridge if necessary
-        boolean needsCallbacks = hasCallback(bridgeMethods);
         if (needsCallbacks) {
             bridge.addField(ClassName.get(packageName, name + "Bridge", "ResultBridge"), "resultBridge", Modifier.PRIVATE, Modifier.FINAL);
             bridge.addField(AtomicLong.class, "receiverIds", Modifier.PRIVATE, Modifier.FINAL);
@@ -174,4 +188,7 @@ public class BridgeInterface {
         return ((PackageElement) element).getQualifiedName().toString();
     }
 
+    public boolean needsCallbacks() {
+        return needsCallbacks;
+    }
 }

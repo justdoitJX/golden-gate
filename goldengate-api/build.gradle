@@ -8,7 +8,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 30
         versionCode 1
-        versionName "1.4.5"
+        versionName "1.4.6"
     }
 
     compileOptions {
@@ -52,7 +52,7 @@ afterEvaluate {
                 artifact sourcesJar
                 groupId = 'com.github.justdoitJX.golden-gate'
                 artifactId = 'goldengate-api'
-                version = '1.4.5'
+                version = '1.4.6'
                 pom {
                     name = 'GoldenGate API'
                     description = 'GoldenGate API library'
