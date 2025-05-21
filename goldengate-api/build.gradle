@@ -2,42 +2,69 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    compileSdkVersion 30
 
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 23
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-        }
-    }
-
-    // JitPack 识别 release component
-    publishing {
-        singleVariant("release")
+        minSdkVersion 16
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.4.2"
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_7
-        targetCompatibility JavaVersion.VERSION_1_7
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lintOptions {
+        abortOnError false
     }
 }
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    compileOnly 'com.google.code.gson:gson:2.4'
+// 添加生成 jar 包的任务
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier = 'sources'
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.release // 如果是 Android library
-            groupId = 'com.github.justdoitJX'
-            artifactId = 'goldengate-api'
-            version = '1.4.0'
+// 修改 classesJar 任务，确保在 assembleRelease 后执行
+task classesJar(type: Jar) {
+    from("$buildDir/intermediates/javac/release/classes")
+    from("$buildDir/generated/source/buildConfig/release")
+    from("$buildDir/tmp/kotlin-classes/release")
+    from("$buildDir/classes/java/main")
+    from("$buildDir/intermediates/classes/release")
+    from("$buildDir/intermediates/classes/debug")
+    from("$buildDir/intermediates/library_classes/release")
+}
+classesJar.dependsOn('assembleRelease')
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.google.code.gson:gson:2.4'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifact classesJar
+                artifact sourcesJar
+                groupId = 'com.github.justdoitJX.golden-gate'
+                artifactId = 'goldengate-api'
+                version = '1.4.2'
+                pom {
+                    name = 'GoldenGate API'
+                    description = 'GoldenGate API library'
+                    url = 'https://github.com/justdoitJX/golden-gate'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                }
+            }
         }
     }
 }

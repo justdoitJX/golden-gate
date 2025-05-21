@@ -1,1 +1,1 @@
-include ':sample', ':goldengate-api', ':goldengate-compiler'
+include ':goldengate-api', ':goldengate-compiler', ':sample'
