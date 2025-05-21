@@ -1,0 +1,11 @@
+jdk:
+  - openjdk8
+
+install:
+  - ./gradlew clean
+  - ./gradlew :goldengate-api:publishToMavenLocal
+  - ./gradlew :goldengate-compiler:publishToMavenLocal
+
+publish:
+  - ./gradlew :goldengate-api:publishToMavenRepository
+  - ./gradlew :goldengate-compiler:publishToMavenRepository 
